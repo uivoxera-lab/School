@@ -79,11 +79,13 @@ function login(mode="in",msg=""){
   const n=h("input",{placeholder:"اسمك"}),c=h("input",{placeholder:"رمز المدرسة",dir:"ltr"});
   const go=async()=>{err.textContent="";try{
     if(mode=="in"){await signInWithEmailAndPassword(auth,mail(u.value),p.value)}
-    else{if(!n.value.trim())throw{code:"name"};registering=true;
-      const r=await createUserWithEmailAndPassword(auth,mail(u.value),p.value);
+    else{if(!n.value.trim())throw{code:"name"};registering=true;let r;
+      try{r=await createUserWithEmailAndPassword(auth,mail(u.value),p.value)}
+      catch(e){if(e.code=="auth/email-already-in-use")r=await signInWithEmailAndPassword(auth,mail(u.value),p.value);else throw e}
       await setDoc(doc(db,"users",r.user.uid),{role:"teacher",name:n.value.trim(),code:c.value.trim()});
       registering=false;boot(r.user)}
-  }catch(e){registering=false;err.textContent=e.code=="name"?"اكتب اسمك.":e.code=="permission-denied"?"رمز المدرسة غير صحيح.":"تعذّر الدخول، تأكد من البيانات."}};
+  }catch(e){registering=false;const M={"name":"اكتب اسمك.","permission-denied":"رمز المدرسة غير صحيح، أو لم تُنشر القواعد أو لم يُنشأ config/school.","auth/operation-not-allowed":"فعّل Email/Password في Authentication.","auth/unauthorized-domain":"أضف الدومين في Authorized domains.","auth/weak-password":"كلمة المرور ضعيفة (6 خانات+).","auth/invalid-credential":"اسم المستخدم أو كلمة المرور غير صحيحة.","auth/invalid-email":"اسم المستخدم يجب أن يكون بالإنجليزي بدون مسافات.","auth/email-already-in-use":"اسم المستخدم مستخدم.","auth/invalid-api-key":"إعدادات Firebase غير صحيحة."};
+    err.textContent=(M[e.code]||"تعذّر الدخول")+" ["+(e.code||e.message)+"]"}};
   mount(h("div",{style:"max-width:440px;margin:6vh auto 0"},h("div",{class:"hero",style:"display:block;text-align:center"},h("h1",{},"بوابة المدرسة"),h("span",{},mode=="in"?"تسجيل الدخول":"تسجيل مدرس جديد")),
     h("div",{class:"card"},mode=="in"?[u,p]:[n,u,p,c],err,h("button",{class:"pri",style:"width:100%",onclick:go},mode=="in"?"دخول":"إنشاء الحساب"),
       h("p",{class:"muted",style:"text-align:center"},h("a",{href:"#",onclick:e=>{e.preventDefault();login(mode=="in"?"up":"in")}},mode=="in"?"مدرس جديد؟ سجّل هنا":"لدي حساب"))),
